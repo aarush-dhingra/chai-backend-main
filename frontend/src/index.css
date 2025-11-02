@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* Import Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Theme Configuration */
+@theme {
+  --color-dark-primary: #0e0e10;
+  --color-dark-secondary: #18181b;
+  --color-dark-tertiary: #1f1f23;
+  --color-dark-border: #2d2d31;
+  
+  --color-neon-purple: #9147ff;
+  --color-neon-blue: #5865f2;
+  --color-neon-cyan: #00d9ff;
+  --color-neon-pink: #ff006e;
+  --color-neon-green: #00ff88;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+/* Base Styles */
+* {
+  border-color: var(--color-dark-border);
+}
+
+body {
+  background-color: var(--color-dark-primary);
+  color: #f3f4f6;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--color-dark-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-dark-border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #4b5563;
+}
+
+/* Button Styles */
+.btn-primary {
+  padding: 0.625rem 1.5rem;
+  background: linear-gradient(to right, var(--color-neon-purple), var(--color-neon-blue));
+  color: white;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: opacity 0.2s;
+  box-shadow: 0 10px 15px -3px rgb(145 71 255 / 0.3);
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-secondary {
+  padding: 0.625rem 1.5rem;
+  background-color: var(--color-dark-tertiary);
+  color: #f3f4f6;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-dark-border);
+}
+
+/* Card Styles */
+.card {
+  background-color: var(--color-dark-secondary);
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-dark-border);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.card-hover:hover {
+  border-color: rgb(145 71 255 / 0.5);
+  box-shadow: 0 10px 15px -3px rgb(145 71 255 / 0.1);
+}
+
+/* Input Styles */
+.input {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  background-color: var(--color-dark-tertiary);
+  border: 1px solid var(--color-dark-border);
+  border-radius: 0.5rem;
+  color: #f3f4f6;
+  transition: all 0.2s;
+}
+
+.input::placeholder {
+  color: #6b7280;
+}
+
+.input:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px rgb(145 71 255 / 0.5);
+}
