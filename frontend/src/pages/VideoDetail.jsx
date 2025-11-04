@@ -6,10 +6,33 @@ import LikeButton from '../components/LikeButton';
 import SubscribeButton from '../components/SubscribeButton';
 import CommentSection from '../components/CommentSection';
 import VideoCard from '../components/VideoCard';
+import PlaylistModal from '../components/PlaylistModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getVideoById, getAllVideos } from '../services/api';
-import { FiEye, FiCalendar, FiShare2 } from 'react-icons/fi';
-import { formatDistanceToNow } from 'date-fns';
+import { FiEye, FiCalendar, FiShare2, FiPlus } from 'react-icons/fi';
+
+// ✅ Format video duration to MM:SS
+const formatDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+// ✅ Helper function for time formatting
+const formatTimeAgo = (date) => {
+  const now = new Date();
+  const seconds = Math.floor((now - new Date(date)) / 1000);
+  
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < 2592000) return `${Math.floor(seconds / 604800)}w ago`;
+  return `${Math.floor(seconds / 2592000)}mo ago`;
+};
 
 function VideoDetail() {
   const { videoId } = useParams();
@@ -17,6 +40,7 @@ function VideoDetail() {
   const [video, setVideo] = useState(null);
   const [relatedVideos, setRelatedVideos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
 
   useEffect(() => {
     if (videoId) {
@@ -84,12 +108,32 @@ function VideoDetail() {
               </div>
               <div className="flex items-center space-x-2">
                 <FiCalendar className="w-4 h-4" />
-                <span>{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}</span>
+                <span>{formatTimeAgo(video.createdAt)}</span>
               </div>
+              {video.duration && (
+                <div className="flex items-center space-x-2">
+                  <span>Duration: {formatDuration(video.duration)}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center space-x-3">
-              <LikeButton videoId={video._id} initialLikesCount={video.likesCount} />
+              {/* ✅ Like Button with isLiked prop */}
+              <LikeButton 
+                videoId={video._id} 
+                initialLikesCount={video.likeCount || 0}
+                initialIsLiked={video.isLiked || false}
+              />
+              
+              {/* ✅ Add to Playlist Button */}
+              <button
+                onClick={() => setShowPlaylistModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-dark-tertiary)] hover:bg-[var(--color-dark-border)] rounded-lg transition-colors"
+              >
+                <FiPlus className="w-5 h-5" />
+                <span className="font-semibold">Add to Playlist</span>
+              </button>
+
               <button
                 onClick={handleShare}
                 className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-dark-tertiary)] hover:bg-[var(--color-dark-border)] rounded-lg transition-colors"
@@ -110,7 +154,7 @@ function VideoDetail() {
                 <img
                   src={video.owner?.avatar || '/default-avatar.png'}
                   alt={video.owner?.username}
-                  className="w-14 h-14 rounded-full"
+                  className="w-14 h-14 rounded-full object-cover"
                 />
                 <div>
                   <h3 className="font-semibold text-lg">{video.owner?.fullName}</h3>
@@ -119,9 +163,11 @@ function VideoDetail() {
               </Link>
 
               {user?._id !== video.owner?._id && (
+                /* ✅ Subscribe Button with isSubscribed prop */
                 <SubscribeButton
                   channelId={video.owner?._id}
-                  subscriberCount={video.owner?.subscribersCount}
+                  subscriberCount={video.owner?.subscribersCount || 0}
+                  initialIsSubscribed={video.isSubscribed || false}
                 />
               )}
             </div>
@@ -146,6 +192,13 @@ function VideoDetail() {
           <VideoCard key={relatedVideo._id} video={relatedVideo} />
         ))}
       </div>
+
+      {/* ✅ Playlist Modal */}
+      <PlaylistModal
+        videoId={video._id}
+        isOpen={showPlaylistModal}
+        onClose={() => setShowPlaylistModal(false)}
+      />
     </div>
   );
 }

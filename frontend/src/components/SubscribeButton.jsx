@@ -1,13 +1,29 @@
-import { useState, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { FiBell, FiBellOff } from 'react-icons/fi';
 import { toggleSubscription } from '../services/api';
 
-function SubscribeButton({ channelId, initialIsSubscribed = false, subscriberCount = 0 }) {
+function SubscribeButton({ 
+  channelId, 
+  initialIsSubscribed = false,
+  subscriberCount = 0 
+}) {
   const { user } = useContext(AuthContext);
   const [isSubscribed, setIsSubscribed] = useState(initialIsSubscribed);
   const [subCount, setSubCount] = useState(subscriberCount);
   const [loading, setLoading] = useState(false);
+
+  // ✅ Update when props change (especially important for video changes)
+  useEffect(() => {
+    console.log('SubscribeButton mounted/updated:', { 
+      channelId, 
+      initialIsSubscribed, 
+      subscriberCount 
+    });
+    
+    setIsSubscribed(initialIsSubscribed);
+    setSubCount(subscriberCount);
+  }, [channelId, initialIsSubscribed, subscriberCount]);
 
   const handleSubscribe = async () => {
     if (!user) {
@@ -15,13 +31,23 @@ function SubscribeButton({ channelId, initialIsSubscribed = false, subscriberCou
       return;
     }
 
+    if (user._id === channelId) {
+      alert('You cannot subscribe to your own channel');
+      return;
+    }
+
     setLoading(true);
     try {
-      await toggleSubscription(channelId);
-      setIsSubscribed(!isSubscribed);
-      setSubCount(isSubscribed ? subCount - 1 : subCount + 1);
+      const response = await toggleSubscription(channelId);
+      console.log('Subscribe Response:', response);
+      
+      // ✅ Toggle the state
+      setIsSubscribed(prev => !prev);
+      setSubCount(prev => isSubscribed ? prev - 1 : prev + 1);
+      
     } catch (error) {
       console.error('Failed to toggle subscription:', error);
+      alert('Failed to update subscription');
     } finally {
       setLoading(false);
     }

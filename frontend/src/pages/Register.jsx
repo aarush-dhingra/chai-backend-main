@@ -28,27 +28,39 @@ function Register() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.avatar) {
-      setError('Avatar is required');
-      return;
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!formData.avatar) {
+    setError('Avatar is required');
+    return;
+  }
+
+  setLoading(true);
+  setError('');
+
+  try {
+    // ✅ Create FormData object with files
+    const data = new FormData();
+    data.append('fullName', formData.fullName);
+    data.append('username', formData.username);
+    data.append('email', formData.email);
+    data.append('password', formData.password);
+    data.append('avatar', formData.avatar);  // ← Append the file
+    if (formData.coverImage) {
+      data.append('coverImage', formData.coverImage);
     }
 
-    setLoading(true);
-    setError('');
+    const response = await registerUser(data);
+    login(response.data, response.data.accessToken, response.data.refreshToken);
+    navigate('/');
+  } catch (err) {
+    setError(err.response?.data?.message || 'Registration failed.');
+  } finally {
+    setLoading(false);
+  }
+};
 
-    try {
-      const response = await registerUser(formData);
-      login(response.data.user);
-      navigate('/');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 -ml-64">
@@ -104,7 +116,7 @@ function Register() {
                 <input
                   type="text"
                   value={formData.fullName}
-                  onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   placeholder="Enter your full name"
                   className="input pl-11"
                   required
@@ -120,7 +132,7 @@ function Register() {
                 <input
                   type="text"
                   value={formData.username}
-                  onChange={(e) => setFormData({...formData, username: e.target.value.toLowerCase()})}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
                   placeholder="Choose a username"
                   className="input pl-8"
                   required
@@ -136,7 +148,7 @@ function Register() {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="Enter your email"
                   className="input pl-11"
                   required
@@ -152,7 +164,7 @@ function Register() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Create a password"
                   className="input pl-11 pr-11"
                   required

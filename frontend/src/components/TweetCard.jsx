@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { FiHeart, FiEdit2, FiTrash2, FiMoreVertical } from 'react-icons/fi';
 import { formatDistanceToNow } from 'date-fns';
 
+
 function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
   const { user } = useContext(AuthContext);
   const [showMenu, setShowMenu] = useState(false);
@@ -12,7 +13,9 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
   const [isLiked, setIsLiked] = useState(tweet.isLiked || false);
   const [likesCount, setLikesCount] = useState(tweet.likesCount || 0);
 
+
   const isOwner = user?._id === tweet.owner?._id;
+
 
   const handleEdit = () => {
     if (editContent.trim() && editContent !== tweet.content) {
@@ -21,18 +24,20 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
     setIsEditing(false);
   };
 
+
   const handleLike = () => {
     setIsLiked(!isLiked);
     setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
     if (onLike) onLike(tweet._id);
   };
 
+
   return (
     <div className="card p-6 hover:bg-dark-tertiary/50 transition-colors">
       <div className="flex space-x-4">
         {/* Avatar */}
         <Link
-          to={`/channel/${tweet.owner?.username}`}
+          to={`/c/${tweet.owner?.username}`}  // ✅ CHANGED from /channel/ to /c/
           className="flex-shrink-0"
         >
           <img
@@ -42,13 +47,14 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
           />
         </Link>
 
+
         {/* Content */}
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1 min-w-0">
               <Link
-                to={`/channel/${tweet.owner?.username}`}
+                to={`/c/${tweet.owner?.username}`}  // ✅ CHANGED from /channel/ to /c/
                 className="hover:underline"
               >
                 <h3 className="font-semibold text-white truncate">
@@ -70,6 +76,7 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
               </div>
             </div>
 
+
             {/* Menu */}
             {isOwner && (
               <div className="relative ml-2">
@@ -79,6 +86,7 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
                 >
                   <FiMoreVertical className="w-4 h-4 text-gray-400" />
                 </button>
+
 
                 {showMenu && (
                   <>
@@ -115,6 +123,7 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
               </div>
             )}
           </div>
+
 
           {/* Tweet Content */}
           {isEditing ? (
@@ -156,6 +165,7 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
             </p>
           )}
 
+
           {/* Actions */}
           <div className="flex items-center space-x-6">
             <button
@@ -185,5 +195,6 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
     </div>
   );
 }
+
 
 export default TweetCard;

@@ -3,11 +3,17 @@ import { AuthContext } from '../context/AuthContext';
 import { FiHeart, FiThumbsUp } from 'react-icons/fi';
 import { toggleVideoLike } from '../services/api';
 
-function LikeButton({ videoId, initialLikesCount = 0, variant = 'heart' }) {
+function LikeButton({ videoId, initialLikesCount = 0, initialIsLiked = false, variant = 'heart' }) {
   const { user } = useContext(AuthContext);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(initialIsLiked);  // ✅ Use initial value
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [loading, setLoading] = useState(false);
+
+  // ✅ Update when props change (on refresh or new video)
+  useEffect(() => {
+    setIsLiked(initialIsLiked);
+    setLikesCount(initialLikesCount);
+  }, [videoId, initialIsLiked, initialLikesCount]);
 
   const handleLike = async () => {
     if (!user) {

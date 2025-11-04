@@ -19,9 +19,14 @@ function CommentSection({ videoId }) {
     setLoading(true);
     try {
       const response = await getVideoComments(videoId);
-      setComments(response.data || []);
+      console.log('Comments API Response:', response);
+      
+      // Backend structure: { data: { comments: [...], page, limit, total, totalPages } }
+      const commentsData = response.data?.comments || [];
+      setComments(Array.isArray(commentsData) ? commentsData : []);
     } catch (error) {
       console.error('Failed to fetch comments:', error);
+      setComments([]);
     } finally {
       setLoading(false);
     }
@@ -34,10 +39,15 @@ function CommentSection({ videoId }) {
     setSubmitting(true);
     try {
       const response = await addComment(videoId, newComment);
-      setComments([response.data, ...comments]);
+      console.log('Add Comment Response:', response);
+      
+      // Get the new comment from response
+      const newCommentData = response.data || response;
+      setComments([newCommentData, ...comments]);
       setNewComment('');
     } catch (error) {
       console.error('Failed to add comment:', error);
+      alert('Failed to post comment. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -63,13 +73,13 @@ function CommentSection({ videoId }) {
       </h3>
 
       {/* Add Comment */}
-      {user && (
+      {user ? (
         <form onSubmit={handleAddComment} className="mb-8">
           <div className="flex space-x-3">
             <img
               src={user.avatar || '/default-avatar.png'}
               alt={user.username}
-              className="w-10 h-10 rounded-full flex-shrink-0"
+              className="w-10 h-10 rounded-full flex-shrink-0 object-cover"
             />
             <div className="flex-1">
               <textarea
@@ -99,6 +109,10 @@ function CommentSection({ videoId }) {
             </div>
           </div>
         </form>
+      ) : (
+        <div className="mb-8 p-4 bg-[var(--color-dark-tertiary)] rounded-lg text-center">
+          <p className="text-gray-400">Please log in to comment</p>
+        </div>
       )}
 
       {/* Comments List */}
@@ -107,11 +121,7 @@ function CommentSection({ videoId }) {
           <div className="text-center py-8">
             <div className="inline-block w-8 h-8 border-4 border-[var(--color-neon-purple)] border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : comments.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">
-            No comments yet. Be the first to comment!
-          </p>
-        ) : (
+        ) : comments && Array.isArray(comments) && comments.length > 0 ? (
           comments.map((comment) => (
             <Comment
               key={comment._id}
@@ -120,6 +130,10 @@ function CommentSection({ videoId }) {
               onDelete={handleDeleteComment}
             />
           ))
+        ) : (
+          <p className="text-center text-gray-500 py-8">
+            No comments yet. Be the first to comment!
+          </p>
         )}
       </div>
     </div>

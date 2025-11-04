@@ -28,7 +28,6 @@ const generateAccessandRefreshToken = async (userId) => {
 
 
 const registerUser = asyncHandler(async (req, res) => {
-
     //take user details from frontend --postman can be used if no frontend 
     //validation -- not empty
     //check if user is already register (by username/email)
@@ -38,7 +37,6 @@ const registerUser = asyncHandler(async (req, res) => {
     //remove password and refresh token field from response 
     //check for user creation 
     //return response 
-
 
     //we can get json data,data from form etc like req.body and we are destructuring it
     const { fullName, username, email, password } = req.body
@@ -89,10 +87,31 @@ const registerUser = asyncHandler(async (req, res) => {
 
     if (!createdUser) throw new ApiError(500, "Error in creating the user")
 
-    return res.status(201).json(
-        new ApiResponse(200, createdUser, "user registered successfully")
-    )
+    // ✅ ADD THIS SECTION - Generate tokens for new user
+    const { accessToken, refreshToken } = await generateAccessandRefreshToken(user._id)
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+        .status(201)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new ApiResponse(
+                201,
+                {
+                    user: createdUser,
+                    accessToken,
+                    refreshToken
+                },
+                "User registered successfully"
+            )
+        )
 })
+
 
 
 
@@ -101,7 +120,7 @@ const loginUser = asyncHandler(async (req, res) => {
     // username or email
     //find the user
     //password check
-    //access and referesh token
+    //access and refresh token
     //send these tokens in form of secure cookie
 
     const { email, username, password } = req.body
@@ -116,7 +135,7 @@ const loginUser = asyncHandler(async (req, res) => {
     if (!user) throw new ApiError(400, "User doesnt exist ! Signup to login")
 
     // password checking ke liye we have made a function but that function can be accessed by "user" and not "User"
-    //cause "User" is moongoose ka and is used for functions available in moongoose
+    //cause "User" is mongoose ka and is used for functions available in mongoose
     //the ones which we have made will be accessed by the instance of that "User" which is "user"
 
     const isPasswordValid = await user.isPasswordCorrect(password)
@@ -127,10 +146,10 @@ const loginUser = asyncHandler(async (req, res) => {
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
     //sending cookies
-
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: 'Lax'  // ✅ ADD THIS for better CORS handling
     }
 
     return res
@@ -141,13 +160,15 @@ const loginUser = asyncHandler(async (req, res) => {
             new ApiResponse(
                 200,
                 {
-                    //sending user the cookies so that they can save it 
-                    user: loggedInUser, accessToken, refreshToken
+                    user: loggedInUser,
+                    accessToken,
+                    refreshToken
                 },
                 "User logged in successfully"
             )
         )
 })
+
 
 const logoutUser = asyncHandler(async (req, res) => {
     //cookies clear kardo 
@@ -347,12 +368,22 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 })
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-    const { username } = req.params //username ko url se nikne ke liye we use '.params'
-    if (!username.trim()) throw new ApiError(400, "username is missing")
+    const { username } = req.params;
+    
+    if (!username?.trim()) {
+        throw new ApiError(400, "username is missing");
+    }
+
+    console.log("Looking for username:", username);
+
+    // ✅ Try to find by username OR by _id (in case it's an ObjectId)
     const channel = await User.aggregate([
         {
             $match: {
-                username: username?.toLowerCase()
+                $or: [
+                    { username: username?.toLowerCase() },  // Try lowercase username
+                    { _id: new mongoose.Types.ObjectId(username).catch(() => null) }  // Try as ID
+                ].filter(Boolean)
             }
         },
         {
@@ -369,7 +400,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 localField: "_id",
                 foreignField: "subscriber",
                 as: "subscribedTo"
-            },
+            }
         },
         {
             $addFields: {
@@ -381,7 +412,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 },
                 isSubscribed: {
                     $cond: {
-                        if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+                        if: { $in: [new mongoose.Types.ObjectId(req.user?._id || "000000000000000000000000"), "$subscribers.subscriber"] },
                         then: true,
                         else: false
                     }
@@ -396,65 +427,74 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 channelsSunscribedTo: 1,
                 isSubscribed: 1,
                 avatar: 1,
-                coverImage: 1
+                coverImage: 1,
+                _id: 1
             }
         }
-    ])
-    if(!channel?.length) throw new ApiError(404,"Channel Doesnt Exist")
-    
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(200,channel[0],"User Channel fetched successfully")
-    )
-})
+    ]);
 
-const getWatchHistory=asyncHandler(async(req,res)=>{
-    const user=await User.aggregate([
+    console.log("Channel found:", channel);
+    
+    if (!channel?.length) {
+        throw new ApiError(404, "Channel Doesnt Exist");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, channel[0], "User Channel fetched successfully")
+    );
+});
+
+
+const getWatchHistory = asyncHandler(async(req, res) => {
+    const user = await User.aggregate([
         {
-            $match:{
-                _id:new mongoose.Types.ObjectId(req.user._id)  //notion 
-            },
-            $lookup:{
-                from:"videos",
-                localField:"watchHistory",
-                foreignField:"_id",
-                as:"watchHistory",
-                pipeline:[
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
                     {
-                        $lookup:{
-                            from:"videos",
-                            localField:"owner",
-                            foreignField:"_id",
-                            as:"owner",
-                            pipeline:[
+                        $lookup: {
+                            from: "users",  // ✅ Changed from "videos" to "users"
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
                                 {
-                                    $project:{
-                                        username:1,
-                                        fullName:1,
-                                        avatar:1,
+                                    $project: {
+                                        username: 1,
+                                        fullName: 1,
+                                        avatar: 1,
                                     }
                                 }
                             ]
                         }
                     },
                     {
-                        $addFields:{
-                            owner:{
-                                $first:$owner
+                        $addFields: {
+                            owner: {
+                                $first: "$owner"  // ✅ Fixed - use "$owner" not $owner
                             }
-                        }//coverts the array(given by aggregate pipelines) to object 
+                        }
                     }
                 ]
             }
         }
     ])
+    
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200,user[0].watchHistory,"Watch history fetched successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully")
+        )
 })
+
 
 
 

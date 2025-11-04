@@ -1,6 +1,28 @@
 import { Link } from 'react-router-dom';
 import { FiPlay, FiEye } from 'react-icons/fi';
-import { formatDistanceToNow } from 'date-fns';
+
+// ✅ Format video duration to MM:SS
+const formatDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+// ✅ Helper function for time formatting
+const formatTimeAgo = (date) => {
+  const now = new Date();
+  const seconds = Math.floor((now - new Date(date)) / 1000);
+  
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < 2592000) return `${Math.floor(seconds / 604800)}w ago`;
+  return `${Math.floor(seconds / 2592000)}mo ago`;
+};
 
 function VideoCard({ video }) {
   const formatViews = (views) => {
@@ -26,9 +48,10 @@ function VideoCard({ video }) {
               </div>
             </div>
           </div>
+          {/* ✅ Updated to use formatDuration */}
           {video.duration && (
             <div className="absolute bottom-2 right-2 px-2 py-1 bg-dark-primary/90 rounded text-xs font-semibold">
-              {video.duration}
+              {formatDuration(video.duration)}
             </div>
           )}
         </div>
@@ -43,7 +66,7 @@ function VideoCard({ video }) {
             <img
               src={video.owner?.avatar}
               alt={video.owner?.username}
-              className="w-6 h-6 rounded-full"
+              className="w-6 h-6 rounded-full object-cover"
             />
             <span className="hover:text-white transition-colors">
               {video.owner?.username}
@@ -55,9 +78,8 @@ function VideoCard({ video }) {
               <FiEye className="w-4 h-4" />
               <span>{formatViews(video.views || 0)} views</span>
             </div>
-            <span>
-              {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
-            </span>
+            {/* ✅ Updated to use formatTimeAgo */}
+            <span>{formatTimeAgo(video.createdAt)}</span>
           </div>
         </div>
       </div>

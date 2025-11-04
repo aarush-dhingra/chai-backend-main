@@ -14,26 +14,40 @@ function Subscriptions() {
   const [activeTab, setActiveTab] = useState('videos');
 
   useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
+  if (user?._id) {  // ✅ Make sure user._id exists
+    fetchData();
+  }
+}, [user?._id]);  // ✅ Depend on user._id, not user object
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [channelsRes, videosRes] = await Promise.all([
-        getSubscribedChannels(user._id),
-        getAllVideos({ subscribed: true }),
-      ]);
-      setChannels(channelsRes.data || []);
-      setVideos(videosRes.data.videos || []);
-    } catch (error) {
-      console.error('Failed to fetch subscriptions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+const fetchData = async () => {
+  if (!user?._id) return;
+  
+  setLoading(true);
+  try {
+    const channelsRes = await getSubscribedChannels(user._id);
+    const videosRes = await getAllVideos({ subscribed: true });
+    
+    // ✅ Backend returns: { statusCode, data: { channels, page, limit, ... }, message, success }
+    // So extract channels from the nested data
+    const channelsData = channelsRes.data?.channels || [];
+    const videosData = videosRes.data?.videos || videosRes.videos || [];
+    
+    console.log('Channels:', channelsData);
+    console.log('Videos:', videosData);
+    
+    setChannels(Array.isArray(channelsData) ? channelsData : []);
+    setVideos(Array.isArray(videosData) ? videosData : []);
+  } catch (error) {
+    console.error('Failed to fetch subscriptions:', error);
+    setChannels([]);
+    setVideos([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   if (loading) {
     return <LoadingSpinner />;

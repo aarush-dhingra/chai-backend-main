@@ -1,30 +1,22 @@
 import axios from 'axios';
 
-// Create axios instance with credentials
+// ✅ Use full backend URL instead of proxy
 const api = axios.create({
+  baseURL: 'http://localhost:8000',
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  }
 });
 
-// ========== USER APIs ==========
-export const registerUser = async (userData) => {
-  const formData = new FormData();
-  formData.append('fullName', userData.fullName);
-  formData.append('username', userData.username);
-  formData.append('email', userData.email);
-  formData.append('password', userData.password);
-  formData.append('avatar', userData.avatar);
-  if (userData.coverImage) {
-    formData.append('coverImage', userData.coverImage);
-  }
+// ========== AUTH APIs ==========
 
+export const registerUser = async (formData) => {
   const response = await api.post('/user/register', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: {
+      'Content-Type': 'multipart/form-data',  // ✅ Important!
+    }
   });
   return response.data;
 };
+
 
 export const loginUser = async (credentials) => {
   const response = await api.post('/user/login', credentials);
@@ -41,38 +33,32 @@ export const getCurrentUser = async () => {
   return response.data;
 };
 
-export const changePassword = async (passwordData) => {
-  const response = await api.post('/user/change-password', passwordData);
+export const updateUserProfile = async (userData) => {
+  const response = await api.patch('/user/update-account', userData);  // ✅ Changed
   return response.data;
 };
 
-export const updateAccountDetails = async (data) => {
-  const response = await api.patch('/user/update-account', data);
+export const changeUserPassword = async (passwords) => {
+  const response = await api.post('/user/change-password', passwords);  // ✅ Changed to POST
   return response.data;
 };
 
-export const updateUserAvatar = async (avatarFile) => {
-  const formData = new FormData();
-  formData.append('avatar', avatarFile);
-  
-  const response = await api.patch('/user/avatar', formData, {
+export const updateUserAvatar = async (formData) => {
+  const response = await api.patch('/user/avatar', formData, {  // ✅ Changed
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return response.data;
 };
 
-export const updateUserCoverImage = async (coverImageFile) => {
-  const formData = new FormData();
-  formData.append('coverImage', coverImageFile);
-  
-  const response = await api.patch('/user/cover-image', formData, {
+export const updateUserCoverImage = async (formData) => {
+  const response = await api.patch('/user/cover-image', formData, {  // ✅ Changed
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return response.data;
 };
 
 export const getUserChannelProfile = async (username) => {
-  const response = await api.get(`/user/c/${username}`);
+  const response = await api.get(`/user/c/${username}`);  // ✅ Changed
   return response.data;
 };
 
@@ -80,6 +66,7 @@ export const getWatchHistory = async () => {
   const response = await api.get('/user/history');
   return response.data;
 };
+
 
 // ========== VIDEO APIs ==========
 export const getAllVideos = async (params = {}) => {
@@ -93,26 +80,14 @@ export const getVideoById = async (videoId) => {
 };
 
 export const publishVideo = async (videoData) => {
-  const formData = new FormData();
-  formData.append('title', videoData.title);
-  formData.append('description', videoData.description);
-  formData.append('videoFile', videoData.videoFile);
-  formData.append('thumbnail', videoData.thumbnail);
-  formData.append('isPublished', videoData.isPublished || true);
-
-  const response = await api.post('/video', formData, {
+  const response = await api.post('/video/publish', videoData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return response.data;
 };
 
-export const updateVideo = async (videoId, updateData) => {
-  const formData = new FormData();
-  if (updateData.title) formData.append('title', updateData.title);
-  if (updateData.description) formData.append('description', updateData.description);
-  if (updateData.thumbnail) formData.append('thumbnail', updateData.thumbnail);
-
-  const response = await api.patch(`/video/${videoId}`, formData, {
+export const updateVideo = async (videoId, videoData) => {
+  const response = await api.patch(`/video/${videoId}`, videoData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return response.data;
@@ -151,24 +126,29 @@ export const deleteComment = async (commentId) => {
 
 // ========== LIKE APIs ==========
 export const toggleVideoLike = async (videoId) => {
-  const response = await api.post(`/like/toggle/v/${videoId}`);
+  const response = await api.post(`/like/toggle/v/${videoId}`);  // ← Add /toggle
   return response.data;
 };
 
 export const toggleCommentLike = async (commentId) => {
-  const response = await api.post(`/like/c/${commentId}`);
+  const response = await api.post(`/like/toggle/c/${commentId}`);  // ← Add /toggle
   return response.data;
 };
 
 export const toggleTweetLike = async (tweetId) => {
-  const response = await api.post(`/like/t/${tweetId}`);
+  const response = await api.post(`/like/toggle/t/${tweetId}`);  // ← Add /toggle
   return response.data;
 };
 
-export const getLikedVideos = async () => {
-  const response = await api.get('/like/videos');
+export const getLikedVideos = async (params = {}) => {
+  const response = await api.get('/like/videos', { params });
   return response.data;
 };
+export const getAllTweets = async () => {
+  const response = await api.get('/tweet/');
+  return response.data;
+};
+
 
 // ========== SUBSCRIPTION APIs ==========
 export const toggleSubscription = async (channelId) => {
@@ -244,18 +224,13 @@ export const updatePlaylist = async (playlistId, data) => {
 };
 
 // ========== DASHBOARD APIs ==========
-
 export const getChannelStats = async () => {
   const response = await api.get('/dashboard/stats');
   return response.data;
 };
 
 export const getChannelVideos = async (channelId) => {
-  const response = await api.get(`/dashboard/videos/${channelId}?page=1&limit=100`);
-  // Backend returns: { data: { videos: [...], page, limit, total, totalPages } }
+  const response = await api.get(`/dashboard/videos/${channelId}`, {});  // ✅ Add channelId
   return response.data;
 };
-
-
-export default api;
 

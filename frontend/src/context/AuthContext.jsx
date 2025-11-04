@@ -8,41 +8,55 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in on mount
     const checkAuth = async () => {
       try {
-        const response = await getCurrentUser();
+        // Check if token exists in localStorage
+        const token = localStorage.getItem('accessToken');
         
-        // Set user from response
-        if (response.data) {
-          setUser(response.data);
-        } else if (response.user) {
-          setUser(response.user);
+        if (token) {
+          // If token exists, fetch current user
+          const response = await getCurrentUser();
+          
+          if (response.data) {
+            setUser(response.data);
+          } else if (response.user) {
+            setUser(response.user);
+          }
+        } else {
+          // No token found
+          setUser(null);
         }
       } catch (err) {
-        // Not authenticated - that's ok, just stay logged out
+        console.error('Auth check failed:', err);
+        // Clear invalid tokens
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         setUser(null);
       } finally {
-        // Always finish loading, even if auth check fails
         setLoading(false);
       }
     };
 
     checkAuth();
-  }, []); // Only run once on app mount
+  }, []);
 
-  const login = (userData) => {
+  const login = (userData, accessToken, refreshToken) => {
+    // Save tokens to localStorage
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
     setUser(userData);
   };
 
   const logout = async () => {
     try {
-      // Call logout API - this clears the cookie on backend
+      // Optional: Call logout API if needed
       // await logoutUser();
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
-      // Clear user on frontend
+      // Clear tokens from localStorage
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       setUser(null);
     }
   };

@@ -74,10 +74,28 @@ const deleteTweet = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, tweet, "Tweet deleted successfully"));
 })
+const getAllTweets = asyncHandler(async (req, res) => {
+    const tweets = await Tweet.find()
+        .populate({
+            path: "owner",
+            select: "username fullName avatar _id"  // ✅ Added _id explicitly
+        })
+        .sort({ createdAt: -1 });
+        // ✅ REMOVED .lean() - it can cause populate issues
+
+    console.log("Tweet owner data:", tweets[0]?.owner);  // DEBUG
+
+    return res.status(200).json(
+        new ApiResponse(200, tweets, "All tweets fetched successfully")
+    );
+});
+
+
 
 export {
     createTweet,
     getUserTweets,
     updateTweet,
-    deleteTweet
+    deleteTweet,
+    getAllTweets
 }

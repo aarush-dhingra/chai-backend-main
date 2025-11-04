@@ -22,20 +22,24 @@ function Channel() {
   }, [username]);
 
   const fetchChannelData = async () => {
-    setLoading(true);
-    try {
-      const [channelRes, videosRes] = await Promise.all([
-        getUserChannelProfile(username),
-        getAllVideos({ username }),
-      ]);
-      setChannel(channelRes.data);
-      setVideos(videosRes.data.videos || []);
-    } catch (error) {
-      console.error('Failed to fetch channel data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const channelRes = await getUserChannelProfile(username);
+    const videosRes = await getAllVideos();
+    
+    // ✅ Filter videos to only show this channel's videos
+    const channelVideos = (videosRes.data?.videos || []).filter(
+      video => video.owner?._id === channelRes.data._id
+    );
+    
+    setChannel(channelRes.data);
+    setVideos(channelVideos);
+  } catch (error) {
+    console.error('Failed to fetch channel data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (loading) {
     return <LoadingSpinner />;

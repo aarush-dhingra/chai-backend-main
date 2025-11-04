@@ -10,7 +10,9 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     const { channelId } = req.params
     if (!isValidObjectId(channelId)) throw new ApiError(400, "Invalid Channel Id");
     const user = req.user?._id
+    
     if (!user) throw new ApiError(400, "User needs to log in to subscribe")
+    console.log('Toggle Subscription:', { channelId, userId: user });
 
     const subscribeStatus = await Subscription.findOne({ channel: channelId, subscriber: user });
     if (subscribeStatus) {
