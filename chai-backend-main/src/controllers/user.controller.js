@@ -6,6 +6,7 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
 import removeFromCloudinary from "../utils/cloudinary_remove.js"
+import { isValidObjectId } from "mongoose"
 
 
 const generateAccessandRefreshToken = async (userId) => {
@@ -368,132 +369,118 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 })
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-    const { username } = req.params;
-    
-    if (!username?.trim()) {
-        throw new ApiError(400, "username is missing");
-    }
+  const { username } = req.params;
 
-    console.log("Looking for username:", username);
+  if (!username?.trim()) {
+    throw new ApiError(400, "username is missing");
+  }
 
-    // ✅ Try to find by username OR by _id (in case it's an ObjectId)
-    const channel = await User.aggregate([
-        {
-            $match: {
-                $or: [
-                    { username: username?.toLowerCase() },  // Try lowercase username
-                    { _id: new mongoose.Types.ObjectId(username).catch(() => null) }  // Try as ID
-                ].filter(Boolean)
-            }
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: username.toLowerCase()
+      }
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers"
+      }
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo"
+      }
+    },
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers"
         },
-        {
-            $lookup: {
-                from: "subscriptions",
-                localField: "_id",
-                foreignField: "channel",
-                as: "subscribers"
-            }
-        },
-        {
-            $lookup: {
-                from: "subscriptions",
-                localField: "_id",
-                foreignField: "subscriber",
-                as: "subscribedTo"
-            }
-        },
-        {
-            $addFields: {
-                subscribersCount: {
-                    $size: "$subscribers"
-                },
-                channelsSunscribedTo: {
-                    $size: "$subscribedTo"
-                },
-                isSubscribed: {
-                    $cond: {
-                        if: { $in: [new mongoose.Types.ObjectId(req.user?._id || "000000000000000000000000"), "$subscribers.subscriber"] },
-                        then: true,
-                        else: false
-                    }
-                }
-            }
-        },
-        {
-            $project: {
-                fullName: 1,
-                username: 1,
-                subscribersCount: 1,
-                channelsSunscribedTo: 1,
-                isSubscribed: 1,
-                avatar: 1,
-                coverImage: 1,
-                _id: 1
-            }
+        channelsSunscribedTo: {
+          $size: "$subscribedTo"
         }
-    ]);
-
-    console.log("Channel found:", channel);
-    
-    if (!channel?.length) {
-        throw new ApiError(404, "Channel Doesnt Exist");
+      }
+    },
+    {
+      $project: {
+        fullName: 1,
+        username: 1,
+        subscribersCount: 1,
+        channelsSunscribedTo: 1,
+        avatar: 1,
+        coverImage: 1,
+        description: 1,
+        email: 1,
+        _id: 1
+      }
     }
+  ]);
 
-    return res.status(200).json(
-        new ApiResponse(200, channel[0], "User Channel fetched successfully")
-    );
+  if (!channel?.length) {
+    throw new ApiError(404, "Channel Doesn't Exist");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, channel[0], "User Channel fetched successfully"));
 });
 
 
-const getWatchHistory = asyncHandler(async(req, res) => {
-    const user = await User.aggregate([
-        {
-            $match: {
-                _id: new mongoose.Types.ObjectId(req.user._id)
-            }
-        },
-        {
-            $lookup: {
-                from: "videos",
-                localField: "watchHistory",
-                foreignField: "_id",
-                as: "watchHistory",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "users",  // ✅ Changed from "videos" to "users"
-                            localField: "owner",
-                            foreignField: "_id",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        username: 1,
-                                        fullName: 1,
-                                        avatar: 1,
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        $addFields: {
-                            owner: {
-                                $first: "$owner"  // ✅ Fixed - use "$owner" not $owner
-                            }
-                        }
-                    }
-                ]
-            }
+const getWatchHistory = asyncHandler(async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id)
+            .populate({
+                path: "watchHistory",
+                select: "title description videoFile thumbnail views owner createdAt",
+                populate: {
+                    path: "owner",
+                    select: "username fullName avatar"
+                }
+            })
+            .lean();
+
+        if (!user) {
+            return res.status(404).json(
+                new ApiResponse(404, [], "User not found")
+            );
         }
-    ])
-    
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully")
-        )
-})
+
+        console.log("Watch history:", user.watchHistory);  // DEBUG
+
+        return res.status(200).json(
+            new ApiResponse(200, user.watchHistory || [], "Watch history fetched successfully")
+        );
+    } catch (error) {
+        console.error("Error fetching watch history:", error);
+        throw new ApiError(500, "Failed to fetch watch history");
+    }
+});
+
+const addToWatchHistory = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $addToSet: { watchHistory: videoId }  // ✅ Simplified - no need to validate
+        },
+        { new: true }
+    );
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, user, "Added to watch history")
+    );
+});
 
 
 
@@ -509,5 +496,6 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    addToWatchHistory
 }

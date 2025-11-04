@@ -10,9 +10,10 @@ import {
   updateUserAvatar, 
   updateUserCoverImage, 
   getUserChannelProfile, 
-  getWatchHistory 
+  getWatchHistory ,
+  addToWatchHistory
 } from '../controllers/user.controller.js'
-
+import { googleLogin } from '../controllers/google.controller.js';
 import {upload} from '../middlewares/multer.middleware.js'
 import { verifyJWT } from '../middlewares/auth.middleware.js'
 
@@ -45,5 +46,6 @@ router.route('/avatar').patch(verifyJWT, upload.single('avatar'), updateUserAvat
 router.route('/cover-image').patch(verifyJWT, upload.single('coverImage'), updateUserCoverImage)
 router.route('/c/:username').get(getUserChannelProfile)
 router.route('/history').get(verifyJWT, getWatchHistory)
-
+router.route('/watch/:videoId').patch(verifyJWT, addToWatchHistory)
+router.post('/google-login', googleLogin);
 export default router

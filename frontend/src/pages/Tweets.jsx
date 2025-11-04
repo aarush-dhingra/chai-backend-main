@@ -6,7 +6,6 @@ import { getAllTweets, createTweet, updateTweet, deleteTweet, toggleTweetLike } 
 import { FiMessageSquare, FiHeart, FiEdit2, FiTrash2, FiMoreVertical, FiSend } from 'react-icons/fi';
 import { formatDistanceToNow } from 'date-fns';
 
-
 function Tweets() {
   const { user } = useContext(AuthContext);
   const [tweets, setTweets] = useState([]);
@@ -16,12 +15,11 @@ function Tweets() {
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [showMenuId, setShowMenuId] = useState(null);
-
+  const [filteredUsername, setFilteredUsername] = useState(null);
 
   useEffect(() => {
     fetchTweets();
   }, []);
-
 
   const fetchTweets = async () => {
     setLoading(true);
@@ -36,7 +34,6 @@ function Tweets() {
       setLoading(false);
     }
   };
-
 
   const handlePostTweet = async (e) => {
     e.preventDefault();
@@ -55,7 +52,6 @@ function Tweets() {
     }
   };
 
-
   const handleUpdateTweet = async (tweetId) => {
     if (!editContent.trim()) return;
 
@@ -69,10 +65,9 @@ function Tweets() {
     }
   };
 
-
   const handleDeleteTweet = async (tweetId) => {
     if (!confirm('Delete this tweet?')) return;
-    
+
     try {
       await deleteTweet(tweetId);
       setTweets(tweets.filter(t => t._id !== tweetId));
@@ -82,7 +77,6 @@ function Tweets() {
     }
   };
 
-
   const handleLikeTweet = async (tweetId, isLiked) => {
     if (!user) {
       alert('Please login to like tweets');
@@ -91,8 +85,8 @@ function Tweets() {
 
     try {
       await toggleTweetLike(tweetId);
-      setTweets(tweets.map(t => 
-        t._id === tweetId 
+      setTweets(tweets.map(t =>
+        t._id === tweetId
           ? { ...t, isLiked: !isLiked, likesCount: isLiked ? t.likesCount - 1 : t.likesCount + 1 }
           : t
       ));
@@ -101,11 +95,19 @@ function Tweets() {
     }
   };
 
+  // ✅ NEW: Handle filter by username
+  const handleFilterByUser = (username) => {
+    setFilteredUsername(username);
+  };
+
+  // ✅ NEW: Filter tweets display
+  const displayTweets = filteredUsername
+    ? tweets.filter(tweet => tweet.owner?.username === filteredUsername)
+    : tweets;
 
   if (loading) {
     return <LoadingSpinner />;
   }
-
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -117,7 +119,6 @@ function Tweets() {
         </h1>
         <p className="text-gray-400">Share your thoughts with your followers</p>
       </div>
-
 
       {/* Create Tweet - Only if logged in */}
       {user && (
@@ -156,51 +157,69 @@ function Tweets() {
         </div>
       )}
 
+      {/* ✅ NEW: Filter indicator */}
+      {filteredUsername && (
+        <div className="card p-4 bg-dark-secondary/50 flex items-center justify-between">
+          <span className="text-gray-300">
+            Showing tweets from <span className="text-neon-purple font-semibold">@{filteredUsername}</span>
+          </span>
+          <button
+            onClick={() => setFilteredUsername(null)}
+            className="px-4 py-2 bg-neon-purple hover:bg-neon-purple/80 text-white rounded text-sm transition-colors"
+          >
+            Clear Filter
+          </button>
+        </div>
+      )}
 
       {/* Tweets List */}
       <div className="space-y-4">
-        {tweets.length === 0 ? (
+        {displayTweets.length === 0 ? (
           <div className="text-center py-20 card">
             <FiMessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No tweets yet</h3>
-            <p className="text-gray-400">Be the first to share your thoughts!</p>
+            <h3 className="text-xl font-semibold mb-2">
+              {filteredUsername ? `No tweets from @${filteredUsername}` : 'No tweets yet'}
+            </h3>
+            <p className="text-gray-400">
+              {filteredUsername ? 'Try a different user' : 'Be the first to share your thoughts!'}
+            </p>
           </div>
         ) : (
-          tweets.map((tweet) => (
+          displayTweets.map((tweet) => (
             <div key={tweet._id} className="card p-6 hover:bg-dark-tertiary/50 transition-colors">
               <div className="flex space-x-4">
-                {/* Avatar - Clickable Link to Channel */}
-                <Link
-                  to={`/c/${tweet.owner?.username}`}
-                  className="flex-shrink-0"
+                {/* Avatar - Clickable to filter */}
+                <button
+                  onClick={() => handleFilterByUser(tweet.owner?.username)}
+                  className="flex-shrink-0 hover:opacity-80 transition-opacity"
                 >
                   <img
                     src={tweet.owner?.avatar || '/default-avatar.png'}
                     alt={tweet.owner?.username}
                     className="w-12 h-12 rounded-full border-2 border-dark-border hover:border-neon-purple transition-colors"
                   />
-                </Link>
-
+                </button>
 
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex-1 min-w-0">
-                      {/* Name and Username - Both clickable to channel */}
-                      <Link
-                        to={`/c/${tweet.owner?.username}`}
-                        className="hover:underline"
+                      {/* Name - Clickable to filter */}
+                      <button
+                        onClick={() => handleFilterByUser(tweet.owner?.username)}
+                        className="hover:underline w-fit transition-colors"
                       >
-                        <h3 className="font-semibold text-white truncate">
+                        <h3 className="font-semibold text-white truncate hover:text-neon-purple">
                           {tweet.owner?.fullName}
                         </h3>
-                      </Link>
+                      </button>
                       <div className="flex items-center space-x-2 text-sm text-gray-400">
-                        <Link
-                          to={`/c/${tweet.owner?.username}`}
-                          className="hover:underline hover:text-neon-purple"
+                        {/* Username - Clickable to filter */}
+                        <button
+                          onClick={() => handleFilterByUser(tweet.owner?.username)}
+                          className="hover:underline hover:text-neon-purple transition-colors"
                         >
                           @{tweet.owner?.username}
-                        </Link>
+                        </button>
                         <span>•</span>
                         <span>
                           {formatDistanceToNow(new Date(tweet.createdAt), { addSuffix: true })}
@@ -214,7 +233,6 @@ function Tweets() {
                       </div>
                     </div>
 
-
                     {/* Tweet Menu - Only for tweet owner */}
                     {user?._id === tweet.owner?._id && (
                       <div className="relative ml-2">
@@ -225,7 +243,6 @@ function Tweets() {
                           <FiMoreVertical className="w-4 h-4" />
                         </button>
 
-
                         {showMenuId === tweet._id && (
                           <>
                             {/* Backdrop */}
@@ -233,7 +250,7 @@ function Tweets() {
                               className="fixed inset-0 z-10"
                               onClick={() => setShowMenuId(null)}
                             />
-                            
+
                             <div className="absolute right-0 mt-2 w-36 card shadow-xl z-20">
                               <button
                                 onClick={() => {
@@ -259,7 +276,6 @@ function Tweets() {
                       </div>
                     )}
                   </div>
-
 
                   {/* Tweet Content */}
                   {editingId === tweet._id ? (
@@ -291,20 +307,17 @@ function Tweets() {
                     </p>
                   )}
 
-
                   {/* Actions */}
                   <button
                     onClick={() => handleLikeTweet(tweet._id, tweet.isLiked)}
-                    className={`flex items-center space-x-2 transition-colors ${
-                      tweet.isLiked
+                    className={`flex items-center space-x-2 transition-colors ${tweet.isLiked
                         ? 'text-[var(--color-neon-pink)]'
                         : 'text-gray-400 hover:text-[var(--color-neon-pink)]'
-                    }`}
+                      }`}
                   >
                     <FiHeart
-                      className={`w-4 h-4 transition-all ${
-                        tweet.isLiked ? 'fill-current scale-110' : ''
-                      }`}
+                      className={`w-4 h-4 transition-all ${tweet.isLiked ? 'fill-current scale-110' : ''
+                        }`}
                     />
                     <span className="text-sm">
                       {tweet.likesCount > 0 && tweet.likesCount}
@@ -319,6 +332,5 @@ function Tweets() {
     </div>
   );
 }
-
 
 export default Tweets;

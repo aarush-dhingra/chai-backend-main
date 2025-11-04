@@ -1,11 +1,9 @@
 import { useState, useContext } from 'react';
-import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { FiHeart, FiEdit2, FiTrash2, FiMoreVertical } from 'react-icons/fi';
 import { formatDistanceToNow } from 'date-fns';
 
-
-function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
+function TweetCard({ tweet, onUpdate, onDelete, onLike, onFilterByUser }) {
   const { user } = useContext(AuthContext);
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -13,9 +11,13 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
   const [isLiked, setIsLiked] = useState(tweet.isLiked || false);
   const [likesCount, setLikesCount] = useState(tweet.likesCount || 0);
 
-
   const isOwner = user?._id === tweet.owner?._id;
 
+  const handleUserClick = () => {
+    if (onFilterByUser && tweet.owner?.username) {
+      onFilterByUser(tweet.owner.username);
+    }
+  };
 
   const handleEdit = () => {
     if (editContent.trim() && editContent !== tweet.content) {
@@ -24,45 +26,48 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
     setIsEditing(false);
   };
 
-
   const handleLike = () => {
     setIsLiked(!isLiked);
     setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
     if (onLike) onLike(tweet._id);
   };
 
-
   return (
     <div className="card p-6 hover:bg-dark-tertiary/50 transition-colors">
       <div className="flex space-x-4">
-        {/* Avatar */}
-        <Link
-          to={`/c/${tweet.owner?.username}`}  // ✅ CHANGED from /channel/ to /c/
-          className="flex-shrink-0"
+        {/* Avatar - Clickable to show user's tweets */}
+        <div
+          onClick={handleUserClick}
+          className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
         >
           <img
             src={tweet.owner?.avatar || '/default-avatar.png'}
             alt={tweet.owner?.username}
             className="w-12 h-12 rounded-full border-2 border-dark-border hover:border-neon-purple transition-colors"
           />
-        </Link>
-
+        </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1 min-w-0">
-              <Link
-                to={`/c/${tweet.owner?.username}`}  // ✅ CHANGED from /channel/ to /c/
-                className="hover:underline"
+              {/* Username - Clickable to show user's tweets */}
+              <div
+                onClick={handleUserClick}
+                className="cursor-pointer hover:underline w-fit transition-colors"
               >
-                <h3 className="font-semibold text-white truncate">
+                <h3 className="font-semibold text-white truncate hover:text-neon-purple">
                   {tweet.owner?.fullName}
                 </h3>
-              </Link>
+              </div>
               <div className="flex items-center space-x-2 text-sm text-gray-400">
-                <span>@{tweet.owner?.username}</span>
+                <span
+                  onClick={handleUserClick}
+                  className="cursor-pointer hover:text-neon-purple transition-colors"
+                >
+                  @{tweet.owner?.username}
+                </span>
                 <span>•</span>
                 <span>
                   {formatDistanceToNow(new Date(tweet.createdAt), { addSuffix: true })}
@@ -76,7 +81,6 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
               </div>
             </div>
 
-
             {/* Menu */}
             {isOwner && (
               <div className="relative ml-2">
@@ -87,15 +91,13 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
                   <FiMoreVertical className="w-4 h-4 text-gray-400" />
                 </button>
 
-
                 {showMenu && (
                   <>
-                    {/* Backdrop to close menu */}
                     <div
                       className="fixed inset-0 z-10"
                       onClick={() => setShowMenu(false)}
                     />
-                    
+
                     <div className="absolute right-0 mt-2 w-40 card shadow-xl z-20">
                       <button
                         onClick={() => {
@@ -123,7 +125,6 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
               </div>
             )}
           </div>
-
 
           {/* Tweet Content */}
           {isEditing ? (
@@ -165,20 +166,19 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
             </p>
           )}
 
-
           {/* Actions */}
           <div className="flex items-center space-x-6">
             <button
               onClick={handleLike}
               className={`flex items-center space-x-2 group transition-colors ${
-                isLiked
-                  ? 'text-neon-pink'
-                  : 'text-gray-400 hover:text-neon-pink'
+                isLiked ? 'text-neon-pink' : 'text-gray-400 hover:text-neon-pink'
               }`}
             >
-              <div className={`p-2 rounded-full transition-colors ${
-                isLiked ? 'bg-neon-pink/10' : 'group-hover:bg-neon-pink/10'
-              }`}>
+              <div
+                className={`p-2 rounded-full transition-colors ${
+                  isLiked ? 'bg-neon-pink/10' : 'group-hover:bg-neon-pink/10'
+                }`}
+              >
                 <FiHeart
                   className={`w-5 h-5 transition-all ${
                     isLiked ? 'fill-current scale-110' : 'group-hover:scale-110'
@@ -195,6 +195,5 @@ function TweetCard({ tweet, onUpdate, onDelete, onLike }) {
     </div>
   );
 }
-
 
 export default TweetCard;

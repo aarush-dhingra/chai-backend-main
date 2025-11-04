@@ -1,3 +1,4 @@
+// frontend/src/pages/Register.jsx
 import { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -28,39 +29,52 @@ function Register() {
     }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (!formData.avatar) {
-    setError('Avatar is required');
-    return;
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  setLoading(true);
-  setError('');
-
-  try {
-    // ✅ Create FormData object with files
-    const data = new FormData();
-    data.append('fullName', formData.fullName);
-    data.append('username', formData.username);
-    data.append('email', formData.email);
-    data.append('password', formData.password);
-    data.append('avatar', formData.avatar);  // ← Append the file
-    if (formData.coverImage) {
-      data.append('coverImage', formData.coverImage);
+    if (!formData.avatar) {
+      setError('Avatar is required');
+      return;
     }
 
-    const response = await registerUser(data);
-    login(response.data, response.data.accessToken, response.data.refreshToken);
-    navigate('/');
-  } catch (err) {
-    setError(err.response?.data?.message || 'Registration failed.');
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    setError('');
 
+    try {
+      // Create FormData object with files
+      const data = new FormData();
+      data.append('fullName', formData.fullName);
+      data.append('username', formData.username);
+      data.append('email', formData.email);
+      data.append('password', formData.password);
+      data.append('avatar', formData.avatar);
+      if (formData.coverImage) {
+        data.append('coverImage', formData.coverImage);
+      }
+
+      const response = await registerUser(data);
+
+      // Some APIs return ApiResponse wrapper
+      const payload = response?.data?.data ?? response?.data ?? response;
+      // Try to pull user and tokens
+      const user = payload?.user ?? payload;
+      const accessToken = payload?.accessToken;
+      const refreshToken = payload?.refreshToken;
+
+      // If your login expects (user, accessToken, refreshToken)
+      login(user, accessToken, refreshToken);
+      navigate('/');
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err.response?.data?.message || 'Registration failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Inline padding values to guarantee icon space (48px ~ pl-12)
+  const plLeftPx = 48;
+  const prRightPx = 48;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 -ml-64">
@@ -112,14 +126,18 @@ const handleSubmit = async (e) => {
             <div>
               <label className="block text-sm font-semibold mb-2">Full Name</label>
               <div className="relative">
-                <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <FiUser
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
+                  style={{ zIndex: 20 }}
+                />
                 <input
                   type="text"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   placeholder="Enter your full name"
-                  className="input pl-11"
+                  className="input w-full"
                   required
+                  style={{ paddingLeft: `${plLeftPx}px`, paddingRight: '12px', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -128,14 +146,20 @@ const handleSubmit = async (e) => {
             <div>
               <label className="block text-sm font-semibold mb-2">Username</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">@</span>
+                <span
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                  style={{ zIndex: 20 }}
+                >
+                  @
+                </span>
                 <input
                   type="text"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
                   placeholder="Choose a username"
-                  className="input pl-8"
+                  className="input w-full"
                   required
+                  style={{ paddingLeft: `${plLeftPx - 8}px`, paddingRight: '12px', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -144,14 +168,18 @@ const handleSubmit = async (e) => {
             <div>
               <label className="block text-sm font-semibold mb-2">Email</label>
               <div className="relative">
-                <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <FiMail
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
+                  style={{ zIndex: 20 }}
+                />
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="Enter your email"
-                  className="input pl-11"
+                  className="input w-full"
                   required
+                  style={{ paddingLeft: `${plLeftPx}px`, paddingRight: '12px', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -160,20 +188,25 @@ const handleSubmit = async (e) => {
             <div>
               <label className="block text-sm font-semibold mb-2">Password</label>
               <div className="relative">
-                <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <FiLock
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
+                  style={{ zIndex: 20 }}
+                />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Create a password"
-                  className="input pl-11 pr-11"
+                  className="input w-full"
                   required
                   minLength={6}
+                  style={{ paddingLeft: `${plLeftPx}px`, paddingRight: `${prRightPx}px`, boxSizing: 'border-box' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                  style={{ zIndex: 30 }}
                 >
                   {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
                 </button>

@@ -66,6 +66,10 @@ export const getWatchHistory = async () => {
   const response = await api.get('/user/history');
   return response.data;
 };
+export const addToWatchHistory = async (videoId) => {
+  const response = await api.patch(`/user/watch/${videoId}`);
+  return response.data;
+};
 
 
 // ========== VIDEO APIs ==========

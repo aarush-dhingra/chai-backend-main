@@ -30,11 +30,16 @@ const getUserTweets = asyncHandler(async (req, res) => {
     if (!user) {
         throw new ApiError(400, "User not found");
     }
-    const tweets = await Tweet.find({ owner: user });
+    const tweets = await Tweet.find({ owner: user })
+        .populate({
+            path: "owner",
+            select: "username fullName avatar _id"
+        })
+        .sort({ createdAt: -1 });
     return res
         .status(200)
         .json(new ApiResponse(200, tweets, "User tweets fetched successfully"));
-});
+})
 
 
 const updateTweet = asyncHandler(async (req, res) => {

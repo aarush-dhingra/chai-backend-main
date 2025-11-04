@@ -1,3 +1,4 @@
+// frontend/src/pages/Login.jsx
 import { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -28,7 +29,6 @@ function Login() {
     setLoading(true);
     setError('');
 
-    // Validation
     if (!formData.email || !formData.password) {
       setError('Please fill in all fields');
       setLoading(false);
@@ -37,25 +37,24 @@ function Login() {
 
     try {
       const response = await loginUser(formData);
-      
-      // Extract user and tokens from response
       const { user, accessToken, refreshToken } = response.data;
-
-      // Call login with user data and tokens
       login(user, accessToken, refreshToken);
-      
-      // Redirect to home
       navigate('/');
     } catch (err) {
       console.error('Login error:', err);
       setError(
-        err.response?.data?.message || 
+        err.response?.data?.message ||
         'Login failed. Please check your credentials and try again.'
       );
     } finally {
       setLoading(false);
     }
   };
+
+  // Inline style values — these use px so they always override other classes.
+  // plLeftPx controls left padding for inputs so left icons fit.
+  const plLeftPx = 48; // 48px ~ Tailwind pl-12
+  const prRightPx = 48; // right padding for password eye button
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 -ml-64">
@@ -91,7 +90,11 @@ function Login() {
                 Email or Username
               </label>
               <div className="relative">
-                <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                {/* left icon */}
+                <FiMail
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
+                  style={{ zIndex: 20 }}
+                />
                 <input
                   id="email"
                   type="text"
@@ -99,9 +102,17 @@ function Login() {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="Enter your email or username"
-                  className="input pl-11 w-full"
+                  className="input w-full"
                   required
                   disabled={loading}
+                  // Inline styles to force padding regardless of external CSS
+                  style={{
+                    paddingLeft: `${plLeftPx}px`,
+                    paddingRight: '12px',
+                    // preserve existing sizes — don't change UI
+                    height: undefined,
+                    boxSizing: 'border-box'
+                  }}
                 />
               </div>
             </div>
@@ -112,7 +123,11 @@ function Login() {
                 Password
               </label>
               <div className="relative">
-                <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                {/* left icon */}
+                <FiLock
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
+                  style={{ zIndex: 20 }}
+                />
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -120,15 +135,23 @@ function Login() {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Enter your password"
-                  className="input pl-11 pr-11 w-full"
+                  className="input w-full"
                   required
                   disabled={loading}
+                  style={{
+                    paddingLeft: `${plLeftPx}px`,
+                    paddingRight: `${prRightPx}px`,
+                    boxSizing: 'border-box'
+                  }}
                 />
+                {/* right icon button */}
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                   disabled={loading}
+                  style={{ zIndex: 30 }}
                 >
                   {showPassword ? (
                     <FiEyeOff className="w-5 h-5" />
