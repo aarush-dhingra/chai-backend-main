@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { loginUser } from '../services/api';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import GoogleSignIn from '../components/GoogleSignIn';
 
 function Login() {
   const navigate = useNavigate();
@@ -37,7 +38,12 @@ function Login() {
 
     try {
       const response = await loginUser(formData);
-      const { user, accessToken, refreshToken } = response.data;
+      // support ApiResponse wrapper
+      const payload = response?.data?.data ?? response?.data ?? response;
+      const user = payload?.user ?? payload;
+      const accessToken = payload?.accessToken;
+      const refreshToken = payload?.refreshToken;
+
       login(user, accessToken, refreshToken);
       navigate('/');
     } catch (err) {
@@ -97,20 +103,17 @@ function Login() {
                 />
                 <input
                   id="email"
-                  type="text"
                   name="email"
+                  type="text"
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="Enter your email or username"
                   className="input w-full"
                   required
                   disabled={loading}
-                  // Inline styles to force padding regardless of external CSS
                   style={{
                     paddingLeft: `${plLeftPx}px`,
                     paddingRight: '12px',
-                    // preserve existing sizes — don't change UI
-                    height: undefined,
                     boxSizing: 'border-box'
                   }}
                 />
@@ -130,8 +133,8 @@ function Login() {
                 />
                 <input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
                   name="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Enter your password"
@@ -186,8 +189,14 @@ function Login() {
             <div className="flex-1 h-px bg-gray-600"></div>
           </div>
 
+          {/* Google sign-in button (keeps UI style consistent) */}
+          <GoogleSignIn
+            className="btn-primary w-full"
+            buttonText="Continue with Google"
+          />
+
           {/* Footer - Sign Up Link */}
-          <div className="text-center">
+          <div className="text-center mt-4">
             <p className="text-gray-400 text-sm">
               Don't have an account?{' '}
               <Link

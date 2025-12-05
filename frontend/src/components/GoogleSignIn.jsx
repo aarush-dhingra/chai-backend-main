@@ -1,71 +1,93 @@
 // frontend/src/components/GoogleSignIn.jsx
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useContext } from 'react';
 import axios from 'axios';
+import { AuthContext } from '../context/AuthContext';
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-function GoogleSignIn({ onSuccess }) {
-  const navigate = useNavigate();
+/**
+ * GoogleSignIn component:
+ * - initializes Google Identity Services
+ * - opens popup when button clicked (uses google.accounts.id.prompt)
+ * - sends id_token to backend /user/google-login
+ *
+ * Props:
+ * - onSuccess(payload) optional callback (payload = { user, accessToken, refreshToken })
+ *
+ * If you prefer to handle login in parent, pass onSuccess. Otherwise it will call AuthContext.login directly.
+ */
+function GoogleSignIn({ onSuccess = null, buttonText = 'Sign in with Google', className = 'btn-primary w-full mt-3' }) {
+  const { login } = useContext(AuthContext);
 
   useEffect(() => {
-    // wait for google accounts sdk to be loaded
-    if (!window.google || !clientId) return;
+    // guard: wait until SDK is loaded and clientId available
+    if (typeof window === 'undefined') return;
+    if (!window.google) return;
+    if (!clientId) {
+      console.warn('VITE_GOOGLE_CLIENT_ID is not set');
+      return;
+    }
 
     /* global google */
-    google.accounts.id.initialize({
-      client_id: clientId,
-      callback: handleCredentialResponse,
-      ux_mode: 'popup'
-    });
-
-    // optionally render a button into container
-    // google.accounts.id.renderButton(document.getElementById('gsi-button'), { theme: 'outline', size: 'large' });
-
-    // Or show One Tap automatically: google.accounts.id.prompt();
+    try {
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleCredentialResponse,
+        ux_mode: 'popup'
+      });
+    } catch (err) {
+      console.error('Google SDK initialize error', err);
+    }
+    // eslint-disable-next-line
   }, []);
 
-  const handleCredentialResponse = async (response) => {
-    // response.credential is the id_token
+  // Backend endpoint - adjust host if different
+  const backendUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000') + '/user/google-login';
+
+  async function handleCredentialResponse(response) {
+    const idToken = response?.credential;
+    if (!idToken) {
+      console.error('No id_token from Google response', response);
+      return;
+    }
+
     try {
-      const idToken = response?.credential;
-      if (!idToken) throw new Error('No idToken from Google');
-
-      // send idToken to backend for verification & login
-      const res = await axios.post('http://localhost:8000/user/google-login', { idToken }, { withCredentials: true });
-
-      // Backend returns ApiResponse wrapper likely: res.data.data contains { user, accessToken, refreshToken }
+      const res = await axios.post(backendUrl, { idToken }, { withCredentials: true });
       const payload = res?.data?.data ?? res?.data ?? res;
-      if (onSuccess) onSuccess(payload);
-      // Or you can call your AuthContext.login here if you have access
-      // e.g. login(payload.user, payload.accessToken, payload.refreshToken)
+      const user = payload?.user ?? payload;
+      const accessToken = payload?.accessToken;
+      const refreshToken = payload?.refreshToken;
 
+      // If parent wants to handle it
+      if (typeof onSuccess === 'function') {
+        onSuccess({ user, accessToken, refreshToken });
+        return;
+      }
+
+      // otherwise use AuthContext.login
+      if (login) {
+        login(user, accessToken, refreshToken);
+      }
     } catch (err) {
-      console.error('Google sign-in error', err);
-      // show user-friendly message
-      alert('Google sign-in failed. Try again.');
+      console.error('Google sign-in failed', err);
+      // user-friendly fallback:
+      alert('Google sign-in failed. Try again or use email/password.');
     }
-  };
+  }
 
-  // optional: a custom button that triggers google one-tap popup
   const openPopup = () => {
-    if (window.google) {
-      google.accounts.id.prompt(); // shows One Tap UI or popup depending on config
-    } else {
-      alert('Google SDK not loaded yet');
+    if (!window.google) {
+      alert('Google SDK not loaded yet. Try again in a moment.');
+      return;
     }
+    // This will show Google's One Tap / prompt UX or a popup depending on config
+    google.accounts.id.prompt();
   };
 
   return (
-    <div>
-      {/* You can render Google default button (uncomment if you added a container) */}
-      {/* <div id="gsi-button"></div> */}
-
-      {/* Or show custom button that calls google.accounts.id.prompt() */}
-      <button onClick={openPopup} className="btn-google w-full">
-        Sign in with Google
-      </button>
-    </div>
+    <button type="button" onClick={openPopup} className={className}>
+      {buttonText}
+    </button>
   );
 }
 

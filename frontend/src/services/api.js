@@ -1,22 +1,23 @@
+// frontend/src/services/api.js
 import axios from 'axios';
 
-// ✅ Use full backend URL instead of proxy
+// use env var if available, fallback to localhost
+const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: BASE,
   withCredentials: true,
 });
 
 // ========== AUTH APIs ==========
-
 export const registerUser = async (formData) => {
   const response = await api.post('/user/register', formData, {
     headers: {
-      'Content-Type': 'multipart/form-data',  // ✅ Important!
+      'Content-Type': 'multipart/form-data',
     }
   });
   return response.data;
 };
-
 
 export const loginUser = async (credentials) => {
   const response = await api.post('/user/login', credentials);
@@ -34,31 +35,31 @@ export const getCurrentUser = async () => {
 };
 
 export const updateUserProfile = async (userData) => {
-  const response = await api.patch('/user/update-account', userData);  // ✅ Changed
+  const response = await api.patch('/user/update-account', userData);
   return response.data;
 };
 
 export const changeUserPassword = async (passwords) => {
-  const response = await api.post('/user/change-password', passwords);  // ✅ Changed to POST
+  const response = await api.post('/user/change-password', passwords);
   return response.data;
 };
 
 export const updateUserAvatar = async (formData) => {
-  const response = await api.patch('/user/avatar', formData, {  // ✅ Changed
+  const response = await api.patch('/user/avatar', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return response.data;
 };
 
 export const updateUserCoverImage = async (formData) => {
-  const response = await api.patch('/user/cover-image', formData, {  // ✅ Changed
+  const response = await api.patch('/user/cover-image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return response.data;
 };
 
 export const getUserChannelProfile = async (username) => {
-  const response = await api.get(`/user/c/${username}`);  // ✅ Changed
+  const response = await api.get(`/user/c/${username}`);
   return response.data;
 };
 
@@ -71,6 +72,15 @@ export const addToWatchHistory = async (videoId) => {
   return response.data;
 };
 
+export const sendOtp = async (email) => {
+  const response = await api.post('/user/send-otp', { email });
+  return response.data;
+};
+
+export const verifyOtp = async (email, otp) => {
+  const response = await api.post('/user/verify-otp', { email, otp });
+  return response.data;
+};
 
 // ========== VIDEO APIs ==========
 export const getAllVideos = async (params = {}) => {
@@ -130,17 +140,17 @@ export const deleteComment = async (commentId) => {
 
 // ========== LIKE APIs ==========
 export const toggleVideoLike = async (videoId) => {
-  const response = await api.post(`/like/toggle/v/${videoId}`);  // ← Add /toggle
+  const response = await api.post(`/like/toggle/v/${videoId}`);
   return response.data;
 };
 
 export const toggleCommentLike = async (commentId) => {
-  const response = await api.post(`/like/toggle/c/${commentId}`);  // ← Add /toggle
+  const response = await api.post(`/like/toggle/c/${commentId}`);
   return response.data;
 };
 
 export const toggleTweetLike = async (tweetId) => {
-  const response = await api.post(`/like/toggle/t/${tweetId}`);  // ← Add /toggle
+  const response = await api.post(`/like/toggle/t/${tweetId}`);
   return response.data;
 };
 
@@ -152,7 +162,6 @@ export const getAllTweets = async () => {
   const response = await api.get('/tweet/');
   return response.data;
 };
-
 
 // ========== SUBSCRIPTION APIs ==========
 export const toggleSubscription = async (channelId) => {
@@ -234,7 +243,14 @@ export const getChannelStats = async () => {
 };
 
 export const getChannelVideos = async (channelId) => {
-  const response = await api.get(`/dashboard/videos/${channelId}`, {});  // ✅ Add channelId
+  const response = await api.get(`/dashboard/videos/${channelId}`, {});
   return response.data;
 };
 
+// ========== GOOGLE ==========
+export const googleLogin = async (idToken) => {
+  const response = await api.post('/user/google-login', { idToken });
+  return response.data;
+};
+
+export default api;

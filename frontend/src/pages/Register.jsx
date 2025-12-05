@@ -2,7 +2,7 @@
 import { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { registerUser } from '../services/api';
+import { registerUser, sendOtp, verifyOtp } from '../services/api';
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiImage } from 'react-icons/fi';
 
 function Register() {
@@ -21,6 +21,13 @@ function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // OTP related state
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpMessage, setOtpMessage] = useState('');
+
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -29,8 +36,51 @@ function Register() {
     }
   };
 
+  const handleSendOtp = async () => {
+    setOtpMessage('');
+    if (!formData.email) {
+      setOtpMessage('Enter your email first');
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      await sendOtp(formData.email);
+      setOtpSent(true);
+      setOtpMessage('OTP sent to your email. Check inbox (and spam).');
+    } catch (err) {
+      console.error('sendOtp error', err);
+      setOtpMessage(err?.response?.data?.message || 'Failed to send OTP. Try again later.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!formData.email || !otp) {
+      setOtpMessage('Enter the OTP received via email');
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      await verifyOtp(formData.email, otp);
+      setOtpVerified(true);
+      setOtpMessage('Email verified ✅ you may now create account.');
+    } catch (err) {
+      console.error('verifyOtp error', err);
+      setOtpMessage(err?.response?.data?.message || 'Invalid OTP');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    if (!otpVerified) {
+      setError('Please verify your email using OTP before creating account.');
+      return;
+    }
 
     if (!formData.avatar) {
       setError('Avatar is required');
@@ -38,30 +88,21 @@ function Register() {
     }
 
     setLoading(true);
-    setError('');
-
     try {
-      // Create FormData object with files
       const data = new FormData();
       data.append('fullName', formData.fullName);
       data.append('username', formData.username);
       data.append('email', formData.email);
       data.append('password', formData.password);
       data.append('avatar', formData.avatar);
-      if (formData.coverImage) {
-        data.append('coverImage', formData.coverImage);
-      }
+      if (formData.coverImage) data.append('coverImage', formData.coverImage);
 
       const response = await registerUser(data);
-
-      // Some APIs return ApiResponse wrapper
       const payload = response?.data?.data ?? response?.data ?? response;
-      // Try to pull user and tokens
       const user = payload?.user ?? payload;
       const accessToken = payload?.accessToken;
       const refreshToken = payload?.refreshToken;
 
-      // If your login expects (user, accessToken, refreshToken)
       login(user, accessToken, refreshToken);
       navigate('/');
     } catch (err) {
@@ -72,7 +113,7 @@ function Register() {
     }
   };
 
-  // Inline padding values to guarantee icon space (48px ~ pl-12)
+  // inline padding for icons (same as earlier)
   const plLeftPx = 48;
   const prRightPx = 48;
 
@@ -120,16 +161,12 @@ function Register() {
                 />
               </label>
             </div>
-            <p className="text-center text-xs text-gray-500">Click to upload avatar (required)</p>
 
             {/* Full Name */}
             <div>
               <label className="block text-sm font-semibold mb-2">Full Name</label>
               <div className="relative">
-                <FiUser
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
-                  style={{ zIndex: 20 }}
-                />
+                <FiUser className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" style={{ zIndex: 20 }} />
                 <input
                   type="text"
                   value={formData.fullName}
@@ -146,12 +183,7 @@ function Register() {
             <div>
               <label className="block text-sm font-semibold mb-2">Username</label>
               <div className="relative">
-                <span
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-                  style={{ zIndex: 20 }}
-                >
-                  @
-                </span>
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" style={{ zIndex: 20 }}>@</span>
                 <input
                   type="text"
                   value={formData.username}
@@ -164,34 +196,74 @@ function Register() {
               </div>
             </div>
 
-            {/* Email */}
+            {/* Email + Send OTP */}
             <div>
               <label className="block text-sm font-semibold mb-2">Email</label>
-              <div className="relative">
-                <FiMail
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
-                  style={{ zIndex: 20 }}
-                />
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Enter your email"
-                  className="input w-full"
-                  required
-                  style={{ paddingLeft: `${plLeftPx}px`, paddingRight: '12px', boxSizing: 'border-box' }}
-                />
+              <div className="relative flex items-center">
+                <div className="relative flex-1">
+                  <FiMail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" style={{ zIndex: 20 }} />
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      // reset OTP state if email changes
+                      setOtpSent(false);
+                      setOtp('');
+                      setOtpVerified(false);
+                      setOtpMessage('');
+                    }}
+                    placeholder="Enter your email"
+                    className="input w-full"
+                    required
+                    style={{ paddingLeft: `${plLeftPx}px`, paddingRight: '12px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={otpLoading}
+                  className="ml-3 btn-primary px-4 py-2"
+                >
+                  {otpLoading ? 'Sending...' : (otpSent ? 'Resend OTP' : 'Send OTP')}
+                </button>
               </div>
+              {otpMessage && <div className="mt-2 text-xs text-yellow-300">{otpMessage}</div>}
             </div>
+
+            {/* OTP input (shows after send) */}
+            {otpSent && !otpVerified && (
+              <div>
+                <label className="block text-sm font-semibold mb-2">Enter OTP</label>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="6-digit code"
+                    className="input w-36"
+                    maxLength={6}
+                    style={{ paddingLeft: '12px', boxSizing: 'border-box' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={otpLoading}
+                    className="btn-primary px-4 py-2"
+                  >
+                    {otpLoading ? 'Verifying...' : 'Verify OTP'}
+                  </button>
+                  {otpVerified && <span className="text-green-300">Verified</span>}
+                </div>
+              </div>
+            )}
 
             {/* Password */}
             <div>
               <label className="block text-sm font-semibold mb-2">Password</label>
               <div className="relative">
-                <FiLock
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
-                  style={{ zIndex: 20 }}
-                />
+                <FiLock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" style={{ zIndex: 20 }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
@@ -216,7 +288,7 @@ function Register() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !otpVerified}
               className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}

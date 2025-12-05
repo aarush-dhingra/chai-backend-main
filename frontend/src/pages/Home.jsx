@@ -1,25 +1,32 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import VideoCard from '../components/VideoCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getAllVideos } from '../services/api';
-import { FiTrendingUp, FiClock, FiStar } from 'react-icons/fi';
+import { FiTrendingUp, FiClock, FiStar, FiX } from 'react-icons/fi';
 
 function Home() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchVideos();
+  }, [filter]);
+
+  useEffect(() => {
+    // Get search from URL and sync with state
+    const query = searchParams.get('search');
+    setSearchQuery(query || '');
   }, [searchParams]);
 
   const fetchVideos = async () => {
     setLoading(true);
     try {
       const params = {
-        search: searchParams.get('search') || '',
         sortBy: filter === 'trending' ? 'views' : 'createdAt',
         sortType: 'desc',
       };
@@ -32,6 +39,23 @@ function Home() {
     }
   };
 
+  // Filter logic
+  let displayVideos = videos;
+  if (searchQuery.trim()) {
+    displayVideos = videos.filter(video => {
+      const title = (video.title || '').toLowerCase();
+      const description = (video.description || '').toLowerCase();
+      const query = searchQuery.toLowerCase();
+      return title.includes(query) || description.includes(query);
+    });
+  }
+
+  // ✅ Clear search
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchParams({}); // Remove search param from URL
+  };
+
   const filters = [
     { id: 'all', label: 'All', icon: FiStar },
     { id: 'trending', label: 'Trending', icon: FiTrendingUp },
@@ -40,52 +64,69 @@ function Home() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold mb-2">
-          {searchParams.get('search') ? `Search results for "${searchParams.get('search')}"` : 'Home'}
+        <h1 className="text-4xl font-bold mb-2 flex items-center space-x-3">
+          <FiStar className="text-[var(--color-neon-purple)]" />
+          <span>Discover</span>
         </h1>
-        <p className="text-gray-400">Discover amazing videos from creators</p>
+        <p className="text-gray-400">Amazing videos from creators</p>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center space-x-3 overflow-x-auto pb-2">
-        {filters.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                setFilter(item.id);
-                fetchVideos();
-              }}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
-                filter === item.id
-                  ? 'bg-gradient-to-r from-[var(--color-neon-purple)] to-[var(--color-neon-blue)] text-white'
-                  : 'bg-[var(--color-dark-secondary)] text-gray-400 hover:bg-[var(--color-dark-tertiary)]'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
+      {/* Filter Buttons */}
+      <div className="flex gap-3 items-center flex-wrap">
+        {filters.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              filter === f.id
+                ? 'bg-[var(--color-neon-purple)] text-white'
+                : 'bg-dark-secondary text-gray-400 hover:bg-dark-tertiary'
+            }`}
+          >
+            <f.icon className="w-4 h-4" />
+            <span>{f.label}</span>
+          </button>
+        ))}
+
+        {/* ✅ Clear Search Button - Shows only when searching */}
+        {searchQuery && (
+          <button
+            onClick={handleClearSearch}
+            className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors ml-auto"
+          >
+            <FiX className="w-4 h-4" />
+            <span>Clear "{searchQuery}"</span>
+          </button>
+        )}
       </div>
 
       {/* Videos Grid */}
       {loading ? (
         <LoadingSpinner />
-      ) : videos.length === 0 ? (
+      ) : displayVideos.length === 0 ? (
         <div className="text-center py-20">
-          <div className="w-20 h-20 bg-[var(--color-dark-secondary)] rounded-full flex items-center justify-center mx-auto mb-4">
-            <FiStar className="w-10 h-10 text-gray-600" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">No videos found</h3>
-          <p className="text-gray-400">Try a different search or filter</p>
+          <FiStar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">
+            {searchQuery ? 'No videos found' : 'No videos uploaded yet'}
+          </h3>
+          <p className="text-gray-400 mb-6">
+            {searchQuery 
+              ? `Try a different search term` 
+              : 'Start by uploading your first video'}
+          </p>
+          {searchQuery && (
+            <button
+              onClick={handleClearSearch}
+              className="px-6 py-2 bg-[var(--color-neon-purple)] hover:bg-[var(--color-neon-blue)] rounded-lg transition-colors font-medium"
+            >
+              Clear Search
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {videos.map((video) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {displayVideos.map(video => (
             <VideoCard key={video._id} video={video} />
           ))}
         </div>

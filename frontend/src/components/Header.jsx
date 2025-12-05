@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { FiSearch, FiUpload, FiUser, FiLogOut, FiSettings } from 'react-icons/fi';
 import VideoUploadModal from './VideoUploadModal';
 
+
 function Header() {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -11,23 +12,27 @@ function Header() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/?search=${searchQuery}`);
+      // Navigate to home with search parameter
+      navigate(`/?search=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery(''); // Clear input after search
     }
   };
 
+
   const handleLogout = async () => {
-  try {
-    await logout();
-    navigate('/login');
-  } catch (error) {
-    console.error('Logout error:', error);
-    // Still navigate to login even if logout API fails
-    navigate('/login');
-  }
-};
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      navigate('/login');
+    }
+  };
+
 
   return (
     <>
@@ -43,24 +48,27 @@ function Header() {
             </span>
           </Link>
 
+
           {/* Search Bar */}
           <form onSubmit={handleSearch} className="flex-1 max-w-2xl mx-8">
             <div className="relative">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search videos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="input pr-12"
+                className="w-full pl-10 pr-4 py-2.5 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-neon-purple transition-colors"
               />
               <button
                 type="submit"
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-dark-border rounded-lg transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-dark-border rounded-lg transition-colors text-gray-400 hover:text-neon-purple"
               >
-                <FiSearch className="w-5 h-5 text-gray-400" />
+                <FiSearch className="w-4 h-4" />
               </button>
             </div>
           </form>
+
 
           {/* User Actions */}
           <div className="flex items-center space-x-4">
@@ -75,6 +83,7 @@ function Header() {
                   <span className="font-medium">Upload</span>
                 </button>
 
+
                 {/* User Menu */}
                 <div className="relative">
                   <button
@@ -87,6 +96,7 @@ function Header() {
                       className="w-full h-full object-cover"
                     />
                   </button>
+
 
                   {showUserMenu && (
                     <div className="absolute right-0 mt-2 w-56 card shadow-xl shadow-neon-purple/20">
@@ -142,6 +152,7 @@ function Header() {
         </div>
       </header>
 
+
       {/* Upload Modal */}
       {showUploadModal && (
         <VideoUploadModal onClose={() => setShowUploadModal(false)} />
@@ -149,5 +160,6 @@ function Header() {
     </>
   );
 }
+
 
 export default Header;

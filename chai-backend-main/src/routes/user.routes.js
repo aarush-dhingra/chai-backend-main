@@ -16,6 +16,7 @@ import {
 import { googleLogin } from '../controllers/google.controller.js';
 import {upload} from '../middlewares/multer.middleware.js'
 import { verifyJWT } from '../middlewares/auth.middleware.js'
+import { sendOtp, verifyOtp } from '../controllers/otp.controller.js';
 
 const router = Router()
 
@@ -48,4 +49,6 @@ router.route('/c/:username').get(getUserChannelProfile)
 router.route('/history').get(verifyJWT, getWatchHistory)
 router.route('/watch/:videoId').patch(verifyJWT, addToWatchHistory)
 router.post('/google-login', googleLogin);
+router.post('/send-otp', sendOtp);
+router.post('/verify-otp', verifyOtp);
 export default router

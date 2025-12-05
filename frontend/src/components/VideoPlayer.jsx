@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { FiPlay, FiPause, FiVolume2, FiVolumeX, FiMaximize } from 'react-icons/fi';
 
+
 function VideoPlayer({ videoUrl, thumbnail }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -10,21 +11,26 @@ function VideoPlayer({ videoUrl, thumbnail }) {
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
+
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     const handleLoadedMetadata = () => setDuration(video.duration);
 
+
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
+
 
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
     };
   }, []);
+
 
   const togglePlay = () => {
     if (isPlaying) {
@@ -35,11 +41,13 @@ function VideoPlayer({ videoUrl, thumbnail }) {
     setIsPlaying(!isPlaying);
   };
 
+
   const handleSeek = (e) => {
     const newTime = parseFloat(e.target.value);
     videoRef.current.currentTime = newTime;
     setCurrentTime(newTime);
   };
+
 
   const handleVolumeChange = (e) => {
     const newVolume = parseFloat(e.target.value);
@@ -47,6 +55,7 @@ function VideoPlayer({ videoUrl, thumbnail }) {
     setVolume(newVolume);
     setIsMuted(newVolume === 0);
   };
+
 
   const toggleMute = () => {
     if (isMuted) {
@@ -58,17 +67,24 @@ function VideoPlayer({ videoUrl, thumbnail }) {
     }
   };
 
+
   const toggleFullscreen = () => {
     if (videoRef.current.requestFullscreen) {
       videoRef.current.requestFullscreen();
     }
   };
 
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Calculate progress percentages
+  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const volumePercentage = (isMuted ? 0 : volume) * 100;
+
 
   return (
     <div
@@ -84,6 +100,7 @@ function VideoPlayer({ videoUrl, thumbnail }) {
         onClick={togglePlay}
       />
 
+
       {/* Play Overlay */}
       {!isPlaying && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -96,6 +113,7 @@ function VideoPlayer({ videoUrl, thumbnail }) {
         </div>
       )}
 
+
       {/* Controls */}
       <div
         className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 transition-opacity duration-300 ${
@@ -103,14 +121,21 @@ function VideoPlayer({ videoUrl, thumbnail }) {
         }`}
       >
         {/* Progress Bar */}
-        <input
-          type="range"
-          min="0"
-          max={duration || 0}
-          value={currentTime}
-          onChange={handleSeek}
-          className="w-full h-1 mb-3 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-[var(--color-neon-purple)]"
-        />
+        <div className="relative w-full h-1 mb-3 bg-gray-600 rounded-lg overflow-hidden">
+          <div 
+            className="absolute top-0 left-0 h-full bg-[var(--color-neon-purple)] transition-all"
+            style={{ width: `${progressPercentage}%` }}
+          />
+          <input
+            type="range"
+            min="0"
+            max={duration || 0}
+            value={currentTime}
+            onChange={handleSeek}
+            className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
+          />
+        </div>
+
 
         {/* Control Buttons */}
         <div className="flex items-center justify-between">
@@ -123,6 +148,7 @@ function VideoPlayer({ videoUrl, thumbnail }) {
               {isPlaying ? <FiPause className="w-6 h-6" /> : <FiPlay className="w-6 h-6" />}
             </button>
 
+
             {/* Volume */}
             <div className="flex items-center space-x-2">
               <button
@@ -131,22 +157,30 @@ function VideoPlayer({ videoUrl, thumbnail }) {
               >
                 {isMuted ? <FiVolumeX className="w-5 h-5" /> : <FiVolume2 className="w-5 h-5" />}
               </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={isMuted ? 0 : volume}
-                onChange={handleVolumeChange}
-                className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-[var(--color-neon-purple)]"
-              />
+              <div className="relative w-20 h-1 bg-gray-600 rounded-lg overflow-hidden">
+                <div 
+                  className="absolute top-0 left-0 h-full bg-[var(--color-neon-purple)] transition-all"
+                  style={{ width: `${volumePercentage}%` }}
+                />
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={isMuted ? 0 : volume}
+                  onChange={handleVolumeChange}
+                  className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+              </div>
             </div>
+
 
             {/* Time */}
             <span className="text-white text-sm">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
+
 
           {/* Fullscreen */}
           <button
@@ -160,5 +194,6 @@ function VideoPlayer({ videoUrl, thumbnail }) {
     </div>
   );
 }
+
 
 export default VideoPlayer;
